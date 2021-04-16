@@ -100,10 +100,72 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
 (defun org-books-get-details-goodreads (url)
   "Get book details from goodreads URL."
   (let* ((page-node (enlive-fetch url))
-         (title (org-books--clean-str (enlive-text (enlive-get-element-by-id page-node "bookTitle"))))
-         (author (org-books--clean-str (s-join ", " (mapcar #'enlive-text (enlive-query-all page-node [.authorName > span]))))))
+         (title (org-books-get-title page-node))
+         (author (org-books--clean-str (s-join ", " (mapcar #'enlive-text (enlive-query-all page-node [.authorName > span])))))
+         (numpages (org-books-get-pages page-node))
+         (date (org-books-get-date-dispatch page-node))
+         (gr-rating (org-books-get-rating page-node)))
     (if (not (string-equal title ""))
-        (list title author `(("GOODREADS" . ,url))))))
+        (list title author `(("YEAR" . ,date)
+                             ("PAGES" . ,numpages)
+                             ("GOODREADS-RATING" . ,gr-rating)
+                             ("GOODREADS-URL" . ,url))))))
+
+(defun filter-by-itemprop (itemprop elements)
+  (-filter
+   (lambda (el) (string= itemprop (enlive-attr el 'itemprop)))
+   elements))
+
+(defun org-books-get-title (page-node)
+  (let ((title (org-books--clean-str (enlive-text (enlive-get-element-by-id page-node "bookTitle"))))
+        (series (org-books--clean-str (enlive-text (enlive-query page-node [:bookSeries > a])))))
+    (if (equal "" series)
+        title
+      (s-join " " (list title series)))))
+
+(defun org-books-get-pages (page-node)
+  "Retrieve pagenum from PAGE-NODE of Goodreads page."
+  (->>
+   (enlive-query-all page-node [:details > .row > span])
+   (filter-by-itemprop "numberOfPages")
+   (first)
+   (enlive-text)
+   (s-split-words)
+   (first)))
+
+(defun org-books-get-date-dispatch (page-node)
+  "Extract correct publication date from PAGE-NODE."
+  (if (enlive-query page-node [:details > .row > .greyText])
+      (org-books-get-original-date page-node)
+      (org-books-get-date page-node)))
+
+(defun org-books-get-date (page-node)
+  "Retrieve date from PAGE-NODE of Goodreads page."
+  (->>
+   (enlive-query-all page-node [:details > .row])
+   (second)
+   (enlive-text)
+   (s-match "[0-9]\\{4\\}")
+   (first)))
+
+(defun org-books-get-original-date (page-node)
+  "Retrieve original publication date from PAGE-NODE.
+Assumes it has one."
+  (->>
+   (enlive-query page-node [:details > .row > .greyText])
+   (enlive-text)
+   (s-trim)
+   (s-match "[0-9]\\{4\\}")
+   (first)))
+
+(defun org-books-get-rating (page-node)
+  "Retrieve average rating from PAGE-NODE of Goodreads page."
+  (->>
+   (enlive-query-all page-node [:bookMeta > span])
+   (filter-by-itemprop "ratingValue")
+   (first)
+   (enlive-text)
+   (s-trim)))
 
 (defun org-books-get-url-from-isbn (isbn)
   "Make and return openlibrary url from ISBN."
@@ -284,9 +346,11 @@ Optionally apply PROPS."
 ;;;###autoload
 (defun org-books-rate-book (rating)
   "Apply RATING to book at current point."
-  (interactive "nRating (stars 1-5): ")
-  (if (> rating 0)
-      (org-set-property "RATING" (s-repeat rating ":star:"))))
+  (interactive "nRating (1-5): ")
+  (when (> rating 0)
+    (org-set-property "MY-RATING" rating)
+    (org-todo "READ")
+    (org-set-property "FINISHED" (format-time-string "[%Y-%02m-%02d]"))))
 
 (provide 'org-books)
 ;;; org-books.el ends here
