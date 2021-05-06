@@ -305,8 +305,8 @@ TITLE, AUTHOR and PROPS are formatted using `org-books-format'."
             (bound (save-excursion (org-get-next-sibling))))
         (if (re-search-forward (format "^\\*\\{%s\\}" (+ level 1)) bound t)
             (forward-line -1)))
-    (progn (org-get-next-sibling)
-           (forward-line -1))))
+    (org-get-next-sibling)
+    (forward-line -1)))
 
 (defun org-books-get-headers ()
   "Return list of categories under which books can be filed.
