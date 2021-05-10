@@ -347,7 +347,7 @@ Optionally apply PROPS."
   "Apply RATING to book at current point."
   (interactive "nRating (1-5): ")
   (when (> rating 0)
-    (org-set-property "MY-RATING" rating)
+    (org-set-property "MY-RATING" (number-to-string rating))
     (org-todo "READ")
     (org-set-property "FINISHED" (format-time-string "[%Y-%02m-%02d]"))))
 
