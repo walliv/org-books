@@ -342,14 +342,71 @@ Optionally apply PROPS."
               (save-buffer)))))
     (message "org-books-file not set")))
 
+(defun org-books--safe-max (xs)
+  "Extract the maximum value of XS with special provisions for nil and '(0).
+Used to calculate the number of times a book has been started or finished."
+  (pcase xs
+    ('() 0)
+    ('(0) 1)
+    (_ (apply #'max xs))))
+
+(defun org-books--max-property (name)
+  "Return the highest numerical value of a property name.
+Assumes multiple properties with names like PROPERTY,
+PROPERTY-2, etc., and returns the highest of that number.
+For bare PROPERTY, returns 1. For no properties of NAME,
+returns 0.
+
+Used to count STARTED and FINISHED properties in re-reads."
+  (->> (org-entry-properties nil 'standard)
+    (-map #'car)
+    (--filter (s-contains? name it))
+    (--map (s-chop-prefixes `(,name "-") it))
+    (-map #'string-to-number)
+    (org-books--safe-max)))
+
+(defun org-books--format-property (name counter &optional counter-fun)
+  "Return a property name string given its parameters.
+Based on the number of times a book has been read,
+the string will either be a bare NAME, or NAME-N,
+where N is the current read count.
+
+Used with STARTED, FINISHED, and MY-RATING properties."
+  (let ((n (if counter-fun
+               (funcall counter-fun counter)
+             counter)))
+    (if (< n 2)
+        name
+      (format (concat name "-%d") n))))
+
+;;;###autoload
+(defun org-books-start-reading ()
+  "Mark book at point as READING.
+Also sets the started property to today's date.
+
+This function keeps track of re-reads.
+If the book has already been read at least once,
+opens a new property with the read count and date."
+  (interactive)
+  (org-todo "READING")
+  (let* ((finished (org-books--max-property "FINISHED"))
+         (started (org-books--format-property "STARTED" finished #'1+)))
+    (org-set-property started (format-time-string "[%Y-%02m-%02d]"))))
+
 ;;;###autoload
 (defun org-books-rate-book (rating)
-  "Apply RATING to book at current point."
+  "Apply RATING to book at current point, mark it as read, and datestamp it.
+This function keeps track of re-reads.
+If the book is being re-read, the rating and finish date are
+marked separately for each re-read."
   (interactive "nRating (1-5): ")
   (when (> rating 0)
-    (org-set-property "MY-RATING" (number-to-string rating))
     (org-todo "READ")
-    (org-set-property "FINISHED" (format-time-string "[%Y-%02m-%02d]"))))
+    (let* ((started (org-books--max-property "STARTED"))
+           (finished (org-books--format-property "FINISHED" started))
+           (rating-prop (org-books--format-property "MY-RATING" started)))
+      (org-set-property rating-prop (number-to-string rating))
+      (org-set-property finished (format-time-string "[%Y-%02m-%02d]")))))
 
 (provide 'org-books)
 ;;; org-books.el ends here
