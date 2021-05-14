@@ -101,7 +101,7 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
   "Get book details from goodreads URL."
   (let* ((page-node (enlive-fetch url))
          (title (org-books-get-title page-node))
-         (author (org-books--clean-str (s-join ", " (mapcar #'enlive-text (enlive-query-all page-node [.authorName > span])))))
+         (author (org-books-get-author page-node))
          (numpages (org-books-get-pages page-node))
          (date (org-books-get-date-dispatch page-node))
          (gr-rating (org-books-get-rating page-node)))
@@ -110,6 +110,13 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
                              ("PAGES" . ,numpages)
                              ("GOODREADS-RATING" . ,gr-rating)
                              ("GOODREADS-URL" . ,url))))))
+
+(defun org-books-get-author (page-node)
+  "Retrieve author name(s) from PAGE-NODE of Goodreads page."
+  (->> (enlive-query-all page-node [.authorName > span])
+    (mapcar #'enlive-text)
+    (s-join ", ")
+    (org-books--clean-str)))
 
 (defun filter-by-itemprop (itemprop elements)
   (-filter
