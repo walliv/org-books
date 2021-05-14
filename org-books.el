@@ -119,9 +119,7 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
     (org-books--clean-str)))
 
 (defun filter-by-itemprop (itemprop elements)
-  (-filter
-   (lambda (el) (string= itemprop (enlive-attr el 'itemprop)))
-   elements))
+  (--filter (string= itemprop (enlive-attr it 'itemprop)) elements))
 
 (defun org-books-get-title (page-node)
   (let ((title (org-books--clean-str (enlive-text (enlive-get-element-by-id page-node "bookTitle"))))
