@@ -365,17 +365,15 @@ Used to count STARTED and FINISHED properties in re-reads."
     (-map #'string-to-number)
     (org-books--safe-max)))
 
-(defun org-books--format-property (name counter &optional counter-fun)
+(defun org-books--format-property (name read-count)
   "Return a property name string given its parameters.
 Based on the number of times a book has been read,
 the string will either be a bare NAME, or NAME-N,
 where N is the current read count.
 
 Used with STARTED, FINISHED, and MY-RATING properties."
-  (let ((n (if counter-fun
-               (funcall counter-fun counter)
-             counter)))
-    (if (< n 2)
+  (let ((n (1+ read-count)))
+    (if (= n 1)
         name
       (format (concat name "-%d") n))))
 
@@ -390,23 +388,22 @@ opens a new property with the read count and date."
   (interactive)
   (org-todo "READING")
   (let* ((finished (org-books--max-property "FINISHED"))
-         (started (org-books--format-property "STARTED" finished #'1+)))
+         (started (org-books--format-property "STARTED" finished)))
     (org-set-property started (format-time-string "[%Y-%02m-%02d]"))))
 
 ;;;###autoload
 (defun org-books-rate-book (rating)
   "Apply RATING to book at current point, mark it as read, and datestamp it.
-This function keeps track of re-reads.
-If the book is being re-read, the rating and finish date are
-marked separately for each re-read."
+This function keeps track of re-reads. If the book is being re-read,
+the rating and finish date are marked separately for each re-read."
   (interactive "nRating (1-5): ")
   (when (> rating 0)
     (org-todo "READ")
-    (let* ((started (org-books--max-property "STARTED"))
-           (finished (org-books--format-property "FINISHED" started))
-           (rating-prop (org-books--format-property "MY-RATING" started)))
+    (let* ((finished-count (org-books--max-property "FINISHED"))
+           (finished-str (org-books--format-property "FINISHED" finished-count))
+           (rating-prop (org-books--format-property "MY-RATING" finished-count)))
       (org-set-property rating-prop (number-to-string rating))
-      (org-set-property finished (format-time-string "[%Y-%02m-%02d]")))))
+      (org-set-property finished-str (format-time-string "[%Y-%02m-%02d]")))))
 
 (provide 'org-books)
 ;;; org-books.el ends here
