@@ -218,8 +218,8 @@ is not supported, throw an error."
   "Return a list of authors in the `org-books-file'."
   (with-current-buffer (find-file-noselect org-books-file)
     (->> (org-property-values "AUTHOR")
-       (-reduce-from (lambda (acc line) (append acc (s-split "," line))) nil)
-       (mapcar #'s-trim)
+       (--mapcat (s-split "," it))
+       (-map #'s-trim)
        (-distinct)
        (-sort #'s-less-p))))
 
