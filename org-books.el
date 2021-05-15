@@ -405,10 +405,10 @@ the rating and finish date are marked separately for each re-read."
   (when (> rating 0)
     (org-todo "READ")
     (let* ((finished-count (org-books--max-property "FINISHED"))
-           (finished-str (org-books--format-property "FINISHED" finished-count))
+           (finished-prop (org-books--format-property "FINISHED" finished-count))
            (rating-prop (org-books--format-property "MY-RATING" finished-count)))
       (org-set-property rating-prop (number-to-string rating))
-      (org-set-property finished-str (format-time-string "[%Y-%02m-%02d]")))))
+      (org-set-property finished-prop (format-time-string "[%Y-%02m-%02d]")))))
 
 (provide 'org-books)
 ;;; org-books.el ends here
