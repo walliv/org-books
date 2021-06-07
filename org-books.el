@@ -391,10 +391,12 @@ This function keeps track of re-reads.
 If the book has already been read at least once,
 opens a new property with the read count and date."
   (interactive)
-  (org-todo "READING")
-  (let* ((finished (org-books--max-property "FINISHED"))
-         (started (org-books--format-property "STARTED" finished)))
-    (org-set-property started (format-time-string "[%Y-%02m-%02d]"))))
+  (if (string= "READING" (org-get-todo-state))
+      (message "Already reading!")
+    (org-todo "READING")
+    (let* ((finished (org-books--max-property "FINISHED"))
+           (started (org-books--format-property "STARTED" finished)))
+      (org-set-property started (format-time-string "[%Y-%02m-%02d]")))))
 
 ;;;###autoload
 (defun org-books-rate-book (rating)
