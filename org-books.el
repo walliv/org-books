@@ -361,8 +361,9 @@ Does this my looking up the FINISHED properties and
 finding the one with the highest index."
   (->> (org-entry-properties nil 'standard)
     (-map #'car)
-    (--filter (s-contains? "FINISHED" it))
-    (--map (s-chop-prefixes '("FINISHED" "-") it))
+    (--filter (or (s-contains? "FINISHED" it)
+                  (s-contains? "DNF" it)))
+    (--map (s-chop-prefixes '("FINISHED" "DNF" "-") it))
     (-map #'string-to-number)
     (org-books--safe-max)))
 
@@ -393,6 +394,15 @@ opens a new property with the read count and date."
     (let* ((finished (org-books--times-read))
            (started (org-books--format-property "STARTED" finished)))
       (org-set-property started (format-time-string "[%Y-%02m-%02d]")))))
+
+(defun org-books-dnf ()
+  "Mark book at point as DNF (did not finish).
+This also timestamps it with the current date."
+  (interactive)
+  (org-todo "DNF")
+  (let* ((finished-count (org-books--times-read))
+         (finished-prop (org-books--format-property "DNF" finished-count)))
+    (org-set-property finished-prop (format-time-string "[%Y-%02m-%02d]"))))
 
 ;;;###autoload
 (defun org-books-rate-book (rating)
