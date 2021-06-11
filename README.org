@@ -1,78 +1,50 @@
 #+TITLE: org-books
 #+AUTHOR: Abhinav Tushar
+#+AUTHOR: Andre Goderich
 
-[[https://travis-ci.org/lepisma/org-books][https://img.shields.io/travis/lepisma/org-books/master.svg]] [[https://melpa.org/#/org-books][file:https://melpa.org/packages/org-books-badge.svg]] [[https://stable.melpa.org/#/org-books][file:https://stable.melpa.org/packages/org-books-badge.svg]]
+Reading list management using org-mode.
+Original author: @lepisma (Abhinav Tushar): https://github.com/lepisma/org-books.
+This is my fork with some additional functionality I wanted for myself.
+All credit for the package goes to @lepisma.
+See the original version for a tutorial.
 
-Reading list management using org-mode. A sample list lives on my wiki [[https://lepisma.xyz/wiki/readings/reading-list][here]].
+* Differences from the original version
 
-[[file:./screen.gif]]
+- More details from Goodreads.
+- Automated property and state assignment with in-built functions.
+- Re-read tracking.
 
-** Quickstart
-~org-books~ is available on melpa.
+** Goodreads details
 
-#+BEGIN_SRC emacs-lisp
-;; Set path to the reading list org file
-(setq org-books-file "~/my-list.org")
+The function `org-books-get-details-goodreads` now fetches
+not just the author and book name,
+but also the publication year, page count, and Goodreads rating.
+Some books have the publication year for a newer edition,
+and the original publication year in parentheses:
+in these cases the function fetches the original publication year.
+The function also adds a timestamp
+of the date the book was added to the collection.
 
-;; A basic template file can be generated using the function `org-books-create-file'.
-#+END_SRC
+** State tracking and re-reads
 
-- To add books manually, use ~org-books-add-book~ function. To add from urls, call
-  ~org-books-add-url~ (or use ~org-books-cliplink~ if url is in clipboard).
+I rehauled the `org-books-rate-book` function and added a counterpart
+for beginning a book: `org-books-start-reading`.
+These function now do two things:
 
-- To give ratings, go to the entry and call ~org-books-rate-book~.
+- set the TODO state ('READING' or 'READ'),
+- add a timestamp to the book's properties.
 
-- While filing a book, ~org-books-file-depth~ tells which headings are to be
-  considered as a category (like fiction or something).
+Moreover, the functions support re-reads.
+On every new read, the new starting date,
+completion date, and rating are all recorded separately.
 
-- ~org-books-add-to-top~ (default ~t~) tells whether to add the book at the top or
-  bottom under the selected heading.
+* Core functions for everyday use
 
-** Adding new source
-A /source/ for books provide a /details function/ that takes certain input (like a
-url in case of amazon) and returns a list of ~title~, ~author~ and ~props~. ~props~ is
-an alist which gets added to the entry as org properties. Here is the output
-from amazon's:
+Consider giving keybindings to the following functions:
 
-#+BEGIN_SRC emacs-lisp :exports both :results output
-(print (org-books-get-details-amazon "https://www.amazon.in/Algebra-Chapter-Graduate-Studies-Mathematics/dp/0821847813/"))
-#+END_SRC
-
-#+RESULTS:
-: ("Algebra: Chapter 0 (Graduate Studies in Mathematics)" "Paolo Aluffi" (("AMAZON" . "https://www.amazon.in/Algebra-Chapter-Graduate-Studies-Mathematics/dp/0821847813/")))
-
-With the details function defined, you need to write the url pattern it accepts
-and add it to the variable =org-books-url-pattern-dispatches=. Check variable's
-docstring for more details.
-
-As of now there are the following sources:
-
-- Manual (input: title, author etc.)
-- Amazon (input: url)
-- Goodreads (input: url)
-- Openlibrary (input: url)
-- ISBN (input: ISBN, dispatches openlibrary url source)
-
-** Using org-capture
-For a more flexible setup, you might just want to use ~org-capture~, possibly with
-a little help from functions present in this package. Directly using capture
-gives you much more flexibility over the structure and organization of entries.
-Here we describe a few capture /templates/ that can be used:
-
-*** Manual entry
-
-#+BEGIN_SRC emacs-lisp
-  (setq org-capture-templates
-        '(("b" "Book" entry (file "some-file.org")
-           "* %^{TITLE}\n:PROPERTIES:\n:ADDED: %<[%Y-%02m-%02d]>\n:END:%^{AUTHOR}p\n%?" :empty-lines 1)))
-#+END_SRC
-
-*** Using url from clipboard
-
-#+BEGIN_SRC emacs-lisp
-  (setq org-capture-templates
-        '(("b" "Book" entry (file "some-file.org")
-           "%(let* ((url (substring-no-properties (current-kill 0)))
-                    (details (org-books-get-details url)))
-               (when details (apply #'org-books-format 1 details)))")))
-#+END_SRC
+- `org-books-add-url`: to add new books to the collection.
+- `org-books-start-reading`: when beginning to read a new book
+  (to change its state to READING and timestamp the starting date).
+- `org-books-rate-book`: when you finish a book
+  (to give it a rating from 1 to 5, change its state to READ,
+  and timestamp the finished date).
