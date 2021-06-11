@@ -4,6 +4,7 @@
 
 Reading list management using org-mode.
 Original author: @lepisma (Abhinav Tushar): https://github.com/lepisma/org-books.
+
 This is my fork with some additional functionality I wanted for myself.
 All credit for the package goes to @lepisma.
 See the original version for a tutorial.
@@ -16,7 +17,7 @@ See the original version for a tutorial.
 
 ** Goodreads details
 
-The function `org-books-get-details-goodreads` now fetches
+The function =org-books-get-details-goodreads= now fetches
 not just the author and book name,
 but also the publication year, page count, and Goodreads rating.
 Some books have the publication year for a newer edition,
@@ -27,8 +28,8 @@ of the date the book was added to the collection.
 
 ** State tracking and re-reads
 
-I rehauled the `org-books-rate-book` function and added a counterpart
-for beginning a book: `org-books-start-reading`.
+I rehauled the =org-books-rate-book= function and added a counterpart
+for beginning a book: =org-books-start-reading=.
 These function now do two things:
 
 - set the TODO state ('READING' or 'READ'),
@@ -42,9 +43,9 @@ completion date, and rating are all recorded separately.
 
 Consider giving keybindings to the following functions:
 
-- `org-books-add-url`: to add new books to the collection.
-- `org-books-start-reading`: when beginning to read a new book
+- =org-books-add-url=: to add new books to the collection.
+- =org-books-start-reading=: when beginning to read a new book
   (to change its state to READING and timestamp the starting date).
-- `org-books-rate-book`: when you finish a book
+- =org-books-rate-book=: when you finish a book
   (to give it a rating from 1 to 5, change its state to READ,
   and timestamp the finished date).
