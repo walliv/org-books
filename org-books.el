@@ -355,18 +355,14 @@ Used to calculate the number of times a book has been started or finished."
     ('(0) 1)
     (_ (apply #'max xs))))
 
-(defun org-books--max-property (name)
-  "Return the highest numerical value of a property name.
-Assumes multiple properties with names like PROPERTY,
-PROPERTY-2, etc., and returns the highest of that number.
-For bare PROPERTY, returns 1. For no properties of NAME,
-returns 0.
-
-Used to count STARTED and FINISHED properties in re-reads."
+(defun org-books--times-read ()
+  "Return the number of times a book has been read.
+Does this my looking up the FINISHED properties and
+finding the one with the highest index."
   (->> (org-entry-properties nil 'standard)
     (-map #'car)
-    (--filter (s-contains? name it))
-    (--map (s-chop-prefixes `(,name "-") it))
+    (--filter (s-contains? "FINISHED" it))
+    (--map (s-chop-prefixes '("FINISHED" "-") it))
     (-map #'string-to-number)
     (org-books--safe-max)))
 
@@ -394,7 +390,7 @@ opens a new property with the read count and date."
   (if (string= "READING" (org-get-todo-state))
       (message "Already reading!")
     (org-todo "READING")
-    (let* ((finished (org-books--max-property "FINISHED"))
+    (let* ((finished (org-books--times-read))
            (started (org-books--format-property "STARTED" finished)))
       (org-set-property started (format-time-string "[%Y-%02m-%02d]")))))
 
@@ -406,7 +402,7 @@ the rating and finish date are marked separately for each re-read."
   (interactive "nRating (1-5): ")
   (when (> rating 0)
     (org-todo "READ")
-    (let* ((finished-count (org-books--max-property "FINISHED"))
+    (let* ((finished-count (org-books--times-read))
            (finished-prop (org-books--format-property "FINISHED" finished-count))
            (rating-prop (org-books--format-property "MY-RATING" finished-count)))
       (org-set-property rating-prop (number-to-string rating))
