@@ -260,6 +260,18 @@ assumed, by default, to be marked by READING TODO state."
         (point)))
      (format "TODO=\"%s\"" (or todo-keyword active-todo-keyword)))))
 
+(defun org-books-jump-to-reading ()
+  (interactive)
+  (let ((active-books (org-books--get-active-books)))
+    (if (null active-books)
+        (message "No books currently being read.")
+      (let ((picked-book
+             (helm :sources (helm-build-sync-source "Active books"
+                              :candidates active-books)
+                   :buffer "*helm active books*")))
+        (find-file org-books-file)
+        (goto-char picked-book)))))
+
 (defun org-books-visit-book-log ()
   "Ask to pick a book from currently active one and position
 cursor to add log entry."
