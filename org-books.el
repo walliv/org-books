@@ -272,23 +272,6 @@ assumed, by default, to be marked by READING TODO state."
         (find-file org-books-file)
         (goto-char picked-book)))))
 
-(defun org-books-visit-book-log ()
-  "Ask to pick a book from currently active one and position
-cursor to add log entry."
-  (let ((active-books (org-books--get-active-books)))
-    (if (null active-books)
-        (message "No books active at the moment.")
-      (let ((picked-book
-             (helm :sources (helm-build-sync-source "Active books"
-                              :candidates active-books)
-                   :buffer "*helm active books*")))
-        (find-file org-books-file)
-        (goto-char picked-book)
-        (unless (re-search-forward "^*+ Log$" nil t)
-          (org-insert-heading-after-current)
-          (org-do-demote)
-          (insert "Log\n"))))))
-
 ;;;###autoload
 (defun org-books-cliplink ()
   "Clip link from clipboard."
