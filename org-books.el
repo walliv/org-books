@@ -401,6 +401,10 @@ Used with STARTED, FINISHED, and MY-RATING properties."
         name
       (format (concat name "-%d") n))))
 
+(defun org-books--today-string ()
+  "Return today's date as a formatted string."
+  (format-time-string "[%Y-%02m-%02d]"))
+
 ;;;###autoload
 (defun org-books-start-reading ()
   "Mark book at point as READING.
@@ -415,7 +419,7 @@ opens a new property with the read count and date."
     (org-todo "READING")
     (let* ((times-read (org-books--times-read))
            (started-prop (org-books--format-property "STARTED" times-read)))
-      (org-set-property started-prop (format-time-string "[%Y-%02m-%02d]")))))
+      (org-set-property started-prop (org-books--today-string)))))
 
 (defun org-books-dnf ()
   "Mark book at point as DNF (did not finish).
@@ -424,7 +428,7 @@ This also timestamps it with the current date."
   (org-todo "DNF")
   (let* ((times-read (org-books--times-read))
          (dnf-prop (org-books--format-property "DNF" times-read)))
-    (org-set-property dnf-prop (format-time-string "[%Y-%02m-%02d]"))))
+    (org-set-property dnf-prop (org-books--today-string))))
 
 ;;;###autoload
 (defun org-books-rate-book (rating)
@@ -438,7 +442,7 @@ the rating and finish date are marked separately for each re-read."
            (finished-prop (org-books--format-property "FINISHED" times-read))
            (rating-prop (org-books--format-property "MY-RATING" times-read)))
       (org-set-property rating-prop (number-to-string rating))
-      (org-set-property finished-prop (format-time-string "[%Y-%02m-%02d]")))))
+      (org-set-property finished-prop (org-books--today-string)))))
 
 (provide 'org-books)
 ;;; org-books.el ends here
