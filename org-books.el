@@ -408,14 +408,14 @@ finding the one with the highest index."
     (-map #'string-to-number)
     (org-books--safe-max)))
 
-(defun org-books--format-property (name read-count)
+(defun org-books--format-property (name times-read)
   "Return a property name string given its parameters.
 Based on the number of times a book has been read,
 the string will either be a bare NAME, or NAME-N,
 where N is the current read count.
 
 Used with STARTED, FINISHED, and MY-RATING properties."
-  (let ((n (1+ read-count)))
+  (let ((n (1+ times-read)))
     (if (= n 1)
         name
       (format (concat name "-%d") n))))
@@ -432,18 +432,18 @@ opens a new property with the read count and date."
   (if (string= "READING" (org-get-todo-state))
       (message "Already reading!")
     (org-todo "READING")
-    (let* ((finished (org-books--times-read))
-           (started (org-books--format-property "STARTED" finished)))
-      (org-set-property started (format-time-string "[%Y-%02m-%02d]")))))
+    (let* ((times-read (org-books--times-read))
+           (started-prop (org-books--format-property "STARTED" times-read)))
+      (org-set-property started-prop (format-time-string "[%Y-%02m-%02d]")))))
 
 (defun org-books-dnf ()
   "Mark book at point as DNF (did not finish).
 This also timestamps it with the current date."
   (interactive)
   (org-todo "DNF")
-  (let* ((finished-count (org-books--times-read))
-         (finished-prop (org-books--format-property "DNF" finished-count)))
-    (org-set-property finished-prop (format-time-string "[%Y-%02m-%02d]"))))
+  (let* ((times-read (org-books--times-read))
+         (dnf-prop (org-books--format-property "DNF" times-read)))
+    (org-set-property dnf-prop (format-time-string "[%Y-%02m-%02d]"))))
 
 ;;;###autoload
 (defun org-books-rate-book (rating)
@@ -453,9 +453,9 @@ the rating and finish date are marked separately for each re-read."
   (interactive "nRating (1-5): ")
   (when (> rating 0)
     (org-todo "READ")
-    (let* ((finished-count (org-books--times-read))
-           (finished-prop (org-books--format-property "FINISHED" finished-count))
-           (rating-prop (org-books--format-property "MY-RATING" finished-count)))
+    (let* ((times-read (org-books--times-read))
+           (finished-prop (org-books--format-property "FINISHED" times-read))
+           (rating-prop (org-books--format-property "MY-RATING" times-read)))
       (org-set-property rating-prop (number-to-string rating))
       (org-set-property finished-prop (format-time-string "[%Y-%02m-%02d]")))))
 
