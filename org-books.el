@@ -344,8 +344,9 @@ TITLE, AUTHOR and PROPS are formatted using `org-books-format'."
   (goto-char pos)
   (let ((level (or (org-current-level) 0)))
     (org-books-goto-place)
-    (org-books--insert (+ level 1) title author props)
-    (save-buffer)))
+    (save-excursion
+      (org-books--insert (+ level 1) title author props)
+      (save-buffer))))
 
 (defun org-books-goto-place ()
   "Move to the position where insertion should happen."
@@ -373,17 +374,16 @@ Optionally apply PROPS."
       (read-string "Book Title: ")
       (s-join ", " (completing-read-multiple "Author(s): " (org-books-all-authors))))))
   (if org-books-file
-      (save-excursion
-        (with-current-buffer (find-file-noselect org-books-file)
-          (let ((headers (org-books-get-headers)))
-            (if headers
-                (helm :sources (helm-build-sync-source "org-book categories"
-                                 :candidates (mapcar (lambda (h) (cons (car h) (marker-position (cdr h)))) headers)
-                                 :action (lambda (pos) (org-books--insert-at-pos pos title author props)))
-                      :buffer "*helm org-books add*")
-              (goto-char (point-max))
-              (org-books--insert 1 title author props)
-              (save-buffer)))))
+    (with-current-buffer (find-file-noselect org-books-file)
+      (let ((headers (org-books-get-headers)))
+        (if headers
+            (helm :sources (helm-build-sync-source "org-book categories"
+                             :candidates (mapcar (lambda (h) (cons (car h) (marker-position (cdr h)))) headers)
+                             :action (lambda (pos) (org-books--insert-at-pos pos title author props)))
+                  :buffer "*helm org-books add*")
+          (goto-char (point-max))
+          (org-books--insert 1 title author props)
+          (save-buffer))))
     (message "org-books-file not set")))
 
 (defun org-books--safe-max (xs)
