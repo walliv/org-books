@@ -300,9 +300,13 @@ cursor to add log entry."
 (defun org-books-add-url (url)
   "Add book from web URL."
   (interactive "sUrl: ")
+  (org-books-get-details-from-url url))
+
+(defun org-books-get-details-from-url (url)
   (let ((details (org-books-get-details url)))
     (if (null details)
-        (message "Error in fetching url. Please retry.")
+        (when (yes-or-no-p "Error in fetching url. Try again? ")
+          (org-books-get-details-from-url url))
       (apply #'org-books-add-book details))))
 
 ;;;###autoload
