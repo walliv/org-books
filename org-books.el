@@ -323,7 +323,7 @@ AUTHOR and properties from PROPS go as org-property."
     (org-set-property "ADDED" (format-time-string "[%Y-%02m-%02d]"))
     (dolist (prop props)
       (org-set-property (car prop) (cdr prop)))
-    (buffer-substring-no-properties (point-min) (point-max))))
+    (buffer-string)))
 
 (defun org-books--insert (level title author &optional props)
   "Insert book template at current position in buffer.
@@ -336,23 +336,18 @@ described in docstring of `org-books-format' function."
   "Goto POS in current buffer, insert a new entry and save buffer.
 
 TITLE, AUTHOR and PROPS are formatted using `org-books-format'."
-  (org-content)
+  (outline-show-all)
   (goto-char pos)
   (let ((level (or (org-current-level) 0)))
     (org-books-goto-place)
-    (insert "\n")
     (org-books--insert (+ level 1) title author props)
     (save-buffer)))
 
 (defun org-books-goto-place ()
   "Move to the position where insertion should happen."
   (if org-books-add-to-top
-      (let ((level (or (org-current-level) 0))
-            (bound (save-excursion (org-get-next-sibling))))
-        (if (re-search-forward (format "^\\*\\{%s\\}" (+ level 1)) bound t)
-            (forward-line -1)))
-    (org-get-next-sibling)
-    (forward-line -1)))
+      (org-next-visible-heading 1)
+    (org-get-next-sibling)))
 
 (defun org-books-get-headers ()
   "Return list of categories under which books can be filed.
