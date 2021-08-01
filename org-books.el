@@ -360,8 +360,7 @@ TITLE, AUTHOR and PROPS are formatted using `org-books-format'."
 Each item in list is a pair of title (propertized) and marker
 specifying the position in the file."
   (let ((helm-org-headings-max-depth org-books-file-depth))
-    (mapcar (lambda (it)
-              (cons it (get-text-property 0 'helm-realvalue it)))
+    (--map (cons it (get-text-property 0 'helm-realvalue it))
             (helm-org--get-candidates-in-file org-books-file helm-org-headings-fontify t nil t))))
 
 ;;;###autoload
