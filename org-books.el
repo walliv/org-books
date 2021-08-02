@@ -283,13 +283,10 @@ assumed, by default, to be marked by READING TODO state."
 (defun org-books-add-url (url)
   "Add book from web URL."
   (interactive "sUrl: ")
-  (org-books-get-details-from-url url))
-
-(defun org-books-get-details-from-url (url)
   (let ((details (org-books-get-details url)))
     (if (null details)
         (when (yes-or-no-p "Error in fetching url. Try again? ")
-          (org-books-get-details-from-url url))
+          (org-books-add-url url))
       (apply #'org-books-add-book details))))
 
 ;;;###autoload
