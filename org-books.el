@@ -340,8 +340,7 @@ TITLE, AUTHOR and PROPS are formatted using `org-books-format'."
 Each item in list is a pair of title (propertized) and marker
 specifying the position in the file."
   (let ((helm-org-headings-max-depth org-books-file-depth))
-    (--map (cons it (get-text-property 0 'helm-realvalue it))
-            (helm-org--get-candidates-in-file org-books-file helm-org-headings-fontify t nil t))))
+    (helm-org--get-candidates-in-file org-books-file helm-org-headings-fontify t nil t)))
 
 ;;;###autoload
 (defun org-books-add-book (title author &optional props)
@@ -358,7 +357,7 @@ Optionally apply PROPS."
       (let ((headers (org-books-get-headers)))
         (if headers
             (helm :sources (helm-build-sync-source "org-book categories"
-                             :candidates (mapcar (lambda (h) (cons (car h) (marker-position (cdr h)))) headers)
+                             :candidates headers
                              :action (lambda (pos) (org-books--insert-at-pos pos title author props)))
                   :buffer "*helm org-books add*")
           (goto-char (point-max))
