@@ -14,6 +14,11 @@ See the original version for a tutorial.
 - More details from Goodreads.
 - Automated property and state assignment with in-built functions.
 - Re-read tracking.
+- Jump to reading: quickly find books that you are reading right now.
+- New reading state: DNF! For books you cannot even. (Supports re-read functionality!)
+- Quality of life improvements:
+  + If org-books-add-url fails, it will ask to retry.
+  + Helm call for location of new book has been simplified, and should run faster.
 
 ** Goodreads details
 
@@ -49,3 +54,7 @@ Consider giving keybindings to the following functions:
 - =org-books-rate-book=: when you finish a book
   (to give it a rating from 1 to 5, change its state to READ,
   and timestamp the finished date).
+  + =org-books-dnf=: if for whatever reason you cannot keep reading,
+    abandon ship and mark the book as unfinished.
+- =org-books-jump-to-reading=: quickly find a book with a READING status.
+  You can use this anywhere, not just in the org-books file.
