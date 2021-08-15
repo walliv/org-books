@@ -253,6 +253,7 @@ assumed, by default, to be marked by READING TODO state."
       (point))
      (format "TODO=\"%s\"" (or todo-keyword active-todo-keyword)))))
 
+;;;###autoload
 (defun org-books-jump-to-reading ()
   (interactive)
   (let ((active-books (org-books--get-active-books)))
