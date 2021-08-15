@@ -49,6 +49,7 @@ completion date, and rating are all recorded separately.
 Consider giving keybindings to the following functions:
 
 - =org-books-add-url=: to add new books to the collection.
+  + Alternatively =org-books-cliplink= to add a link from the clipboard.
 - =org-books-start-reading=: when beginning to read a new book
   (to change its state to READING and timestamp the starting date).
 - =org-books-rate-book=: when you finish a book
