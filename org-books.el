@@ -297,7 +297,7 @@ AUTHOR and properties from PROPS go as org-property."
     (org-mode)
     (insert (make-string level ?*) " " title "\n")
     (org-set-property "AUTHOR" author)
-    (org-set-property "ADDED" (format-time-string "[%Y-%02m-%02d]"))
+    (org-set-property "ADDED" (org-books--today-string))
     (dolist (prop props)
       (org-set-property (car prop) (cdr prop)))
     (buffer-string)))
