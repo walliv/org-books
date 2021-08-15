@@ -233,20 +233,14 @@ is not supported, throw an error."
     (if (string-match org-closed-time-regexp ent-body)
         (parse-time-string (match-string-no-properties 1 ent-body)))))
 
-(defun org-books-map-entries (func &optional match scope &rest skip)
-  "Similar to `org-map-entries' but only walks on org-books entries.
-
-Arguments FUNC, MATCH, SCOPE and SKIP follow their definitions
-from `org-map-entries'."
-  (with-current-buffer (find-file-noselect org-books-file)
-    (let ((ignore-sym (gensym)))
-      (-remove-item ignore-sym
-                    (apply #'org-map-entries
-                           (lambda ()
-                             (if (org-books-entry-p)
-                                 (if (functionp func) (funcall func) (funcall (list 'lambda () func)))
-                               ignore-sym))
-                           match scope skip)))))
+(defmacro org-books-map-entries (func &optional match scope &rest skip)
+  "Wrapper around `org-map-entries' that only works on org-books entries.
+See `org-map-entries' for argument documentation."
+  `(with-current-buffer (find-file-noselect org-books-file)
+     (org-map-entries (lambda ()
+                        (when (org-books-entry-p)
+                          ,func))
+                      ,match ,scope ,skip)))
 
 (defun org-books--get-active-books (&optional todo-keyword)
   "Return books that are currently active. Each item returned is
@@ -254,10 +248,9 @@ a pair of book name and position of the headline. Activity is
 assumed, by default, to be marked by READING TODO state."
   (let ((active-todo-keyword "READING"))
     (org-books-map-entries
-     (lambda ()
-       (cons
-        (substring-no-properties (org-get-heading) (+ 1 (length (or todo-keyword active-todo-keyword))))
-        (point)))
+     (cons
+      (substring-no-properties (org-get-heading 'no-tags) (1+ (length (or todo-keyword active-todo-keyword))))
+      (point))
      (format "TODO=\"%s\"" (or todo-keyword active-todo-keyword)))))
 
 (defun org-books-jump-to-reading ()
