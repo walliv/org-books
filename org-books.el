@@ -100,18 +100,18 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
 (defun org-books-get-details-goodreads (url)
   "Get book details from goodreads URL."
   (let* ((page-node (enlive-fetch url))
-         (title (org-books-get-title page-node))
-         (author (org-books-get-author page-node))
-         (numpages (org-books-get-pages page-node))
-         (date (org-books-get-date-dispatch page-node))
-         (gr-rating (org-books-get-rating page-node)))
+         (title (org-books-get-goodreads-title page-node))
+         (author (org-books-get-goodreads-author page-node))
+         (numpages (org-books-get-goodreads-pages page-node))
+         (date (org-books-get-goodreads-date-dispatch page-node))
+         (gr-rating (org-books-get-goodreads-rating page-node)))
     (if (not (string-equal title ""))
         (list title author `(("YEAR" . ,date)
                              ("PAGES" . ,numpages)
                              ("GOODREADS-RATING" . ,gr-rating)
                              ("GOODREADS-URL" . ,url))))))
 
-(defun org-books-get-author (page-node)
+(defun org-books-get-goodreads-author (page-node)
   "Retrieve author name(s) from PAGE-NODE of Goodreads page."
   (->> (enlive-query-all page-node [.authorName > span])
     (mapcar #'enlive-text)
@@ -121,14 +121,14 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
 (defun filter-by-itemprop (itemprop elements)
   (--filter (string= itemprop (enlive-attr it 'itemprop)) elements))
 
-(defun org-books-get-title (page-node)
+(defun org-books-get-goodreads-title (page-node)
   (let ((title (org-books--clean-str (enlive-text (enlive-get-element-by-id page-node "bookTitle"))))
         (series (org-books--clean-str (enlive-text (enlive-query page-node [:bookSeries > a])))))
     (if (equal "" series)
         title
       (s-join " " (list title series)))))
 
-(defun org-books-get-pages (page-node)
+(defun org-books-get-goodreads-pages (page-node)
   "Retrieve pagenum from PAGE-NODE of Goodreads page."
   (->>
    (enlive-query-all page-node [:details > .row > span])
@@ -138,13 +138,13 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
    (s-split-words)
    (first)))
 
-(defun org-books-get-date-dispatch (page-node)
+(defun org-books-get-goodreads-date-dispatch (page-node)
   "Extract correct publication date from PAGE-NODE."
   (if (enlive-query page-node [:details > .row > .greyText])
-      (org-books-get-original-date page-node)
-      (org-books-get-date page-node)))
+      (org-books-get-goodreads-original-date page-node)
+      (org-books-get-goodreads-date page-node)))
 
-(defun org-books-get-date (page-node)
+(defun org-books-get-goodreads-date (page-node)
   "Retrieve date from PAGE-NODE of Goodreads page."
   (->>
    (enlive-query-all page-node [:details > .row])
@@ -153,7 +153,7 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
    (s-match "[0-9]\\{4\\}")
    (first)))
 
-(defun org-books-get-original-date (page-node)
+(defun org-books-get-goodreads-original-date (page-node)
   "Retrieve original publication date from PAGE-NODE.
 Assumes it has one."
   (->>
@@ -163,7 +163,7 @@ Assumes it has one."
    (s-match "[0-9]\\{4\\}")
    (first)))
 
-(defun org-books-get-rating (page-node)
+(defun org-books-get-goodreads-rating (page-node)
   "Retrieve average rating from PAGE-NODE of Goodreads page."
   (->>
    (enlive-query-all page-node [:bookMeta > span])
