@@ -64,7 +64,7 @@
 (defcustom org-books-url-pattern-dispatches
   '(("^\\(www\\.\\)?amazon\\." . org-books-get-details-amazon)
     ("^\\(www\\.\\)?goodreads\\.com" . org-books-get-details-goodreads)
-    ("openlibrary\\.org" . org-books-get-details-isbn))
+    ("openlibrary\\.org" . org-books-get-details-openlibrary))
   "Pairs of url patterns and functions taking url and returning
 book details. Check documentation of `org-books-get-details' for
 return structure from these functions."
@@ -171,6 +171,44 @@ Assumes it has one."
    (first)
    (enlive-text)
    (s-trim)))
+
+(defun org-books-get-details-openlibrary (url)
+  "Get book details from OpenLibrary URL."
+  (let* ((page-node (enlive-fetch url))
+         (title (org-books-get-openlibrary-title page-node))
+         (author (org-books-get-openlibrary-author page-node))
+         (numpages (org-books-get-openlibrary-pages page-node))
+         (date (org-books-get-openlibrary-date page-node)))
+    (if (not (string-equal title ""))
+        (list title author `(("YEAR" . ,date)
+                             ("PAGES" . ,numpages)
+                             ("OPENLIBRARY-URL" . ,url))))))
+
+(defun org-books-get-openlibrary-title (page-node)
+  "Retrieve title from PAGE-NODE of OpenLibrary page."
+  (->> (enlive-query page-node [.work-title])
+       (enlive-text)
+       (string-replace "Book " "#")))
+
+(defun org-books-get-openlibrary-author (page-node)
+  "Retrieve author name(s) from PAGE-NODE of OpenLibrary page."
+  (->> (enlive-query-all page-node [.edition-byline > a])
+       (-map #'enlive-text)
+       (s-join ", ")
+       (org-books--clean-str)))
+
+(defun org-books-get-openlibrary-date (page-node)
+  "Retrieve publication date from PAGE-NODE of OpenLibrary page."
+  (->> (enlive-query page-node [.work-line])
+       (-map #'enlive-text)
+       (-last-item)
+       (s-match "[0-9]\\{4\\}")
+       (first)))
+
+(defun org-books-get-openlibrary-pages (page-node)
+  "Retrieve pagenum from PAGE-NODE of OpenLibrary page."
+  (->> (enlive-query page-node [.edition-pages])
+       (enlive-text)))
 
 (defun org-books-get-url-from-isbn (isbn)
   "Make and return openlibrary url from ISBN."
