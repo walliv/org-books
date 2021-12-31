@@ -64,7 +64,8 @@
 (defcustom org-books-url-pattern-dispatches
   '(("^\\(www\\.\\)?amazon\\." . org-books-get-details-amazon)
     ("^\\(www\\.\\)?goodreads\\.com" . org-books-get-details-goodreads)
-    ("openlibrary\\.org" . org-books-get-details-openlibrary))
+    ("openlibrary\\.org" . org-books-get-details-openlibrary)
+    ("librarything\\.com" . org-books-get-details-librarything))
   "Pairs of url patterns and functions taking url and returning
 book details. Check documentation of `org-books-get-details' for
 return structure from these functions."
@@ -209,6 +210,58 @@ Assumes it has one."
   "Retrieve pagenum from PAGE-NODE of OpenLibrary page."
   (->> (enlive-query page-node [.edition-pages])
        (enlive-text)))
+
+(defun org-books-get-details-librarything (url)
+  "Get book details from librarything URL."
+  (let* ((page-node (enlive-fetch url))
+         (title (org-books-get-librarything-title-series page-node))
+         (author (org-books-get-librarything-author page-node))
+         (date (org-books-get-librarything-date page-node))
+         (lt-rating (org-books-get-librarything-rating page-node)))
+    (if (not (string-equal title ""))
+        (list title author `(("YEAR" . ,date)
+                             ("LIBRARYTHING-RATING" . ,lt-rating)
+                             ("LIBRARYTHING-URL" . ,url))))))
+
+(defun org-books-get-librarything-author (page-node)
+  (->> (enlive-query-all page-node [.headsummary > h2 > a])
+       (-map #'enlive-text)
+       (s-join ", ")))
+
+(defun org-books-get-librarything-title-series (page-node)
+  (s-concat (org-books-get-librarything-title page-node)
+            " "
+            (org-books-get-librarything-series page-node)))
+
+(defun org-books-get-librarything-title (page-node)
+  (->> (enlive-query page-node [.divcanonicaltitle])
+       (enlive-text)
+       (s-trim)))
+
+(defun org-books-get-librarything-series (page-node)
+  (--> (enlive-query-all page-node [:seriesforwork_container > div])
+       (-map #'enlive-text it)
+       (-map #'org-books--deparenthesize it)
+       (s-join "; " it)
+       (s-concat "(" it ")")))
+
+(defun org-books--deparenthesize (str)
+  "Remove parentheses around any word in STR."
+  (->> str
+       (s-split-words)
+       (s-join " ")))
+
+(defun org-books-get-librarything-date (page-node)
+  (->> (enlive-query page-node [.divoriginalpublicationdate])
+       (enlive-text)
+       (s-match "^[0-9]\\{4\\}")
+       (first)))
+
+(defun org-books-get-librarything-rating (page-node)
+  (->> (enlive-query page-node [.dark_hint])
+       (enlive-text)
+       (s-match "[0-9]\.[0-9]\\{2\\}")
+       (first)))
 
 (defun org-books-get-url-from-isbn (isbn)
   "Make and return openlibrary url from ISBN."
