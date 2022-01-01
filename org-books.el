@@ -260,7 +260,7 @@ Assumes it has one."
 (defun org-books-get-librarything-rating (page-node)
   (->> (enlive-query page-node [.dark_hint])
        (enlive-text)
-       (s-match "[0-9]\.[0-9]\\{2\\}")
+       (s-match (rx (seq num (? (seq "." (** 1 2 num))))))
        (first)))
 
 (defun org-books-get-url-from-isbn (isbn)
