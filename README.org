@@ -12,6 +12,7 @@ See the original version for a tutorial.
 * Differences from the original version
 
 - More details from Goodreads.
+- New: support for OpenLibrary and LibraryThing!
 - Automated property and state assignment with in-built functions.
 - Re-read tracking.
 - Jump to reading: quickly find books that you are reading right now.
