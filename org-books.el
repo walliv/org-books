@@ -65,6 +65,7 @@
   '(("^\\(www\\.\\)?amazon\\." . org-books-get-details-amazon)
     ("^\\(www\\.\\)?goodreads\\.com" . org-books-get-details-goodreads)
     ("openlibrary\\.org" . org-books-get-details-openlibrary)
+    ("librarything\\.com/nseries" . org-books-librarything-series-get-urls)
     ("librarything\\.com" . org-books-get-details-librarything))
   "Pairs of url patterns and functions taking url and returning
 book details. Check documentation of `org-books-get-details' for
@@ -119,7 +120,8 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
     (s-join ", ")
     (org-books--clean-str)))
 
-(defun filter-by-itemprop (itemprop elements)
+(defun org-books--filter-by-itemprop (itemprop elements)
+  "Filter the ELEMENTS in html soup by ITEMPROP."
   (--filter (string= itemprop (enlive-attr it 'itemprop)) elements))
 
 (defun org-books-get-goodreads-title (page-node)
@@ -127,13 +129,13 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
         (series (org-books--clean-str (enlive-text (enlive-query page-node [:bookSeries > a])))))
     (if (equal "" series)
         title
-      (s-join " " (list title series)))))
+      (s-join " " (list title (string-replace "#" "" series))))))
 
 (defun org-books-get-goodreads-pages (page-node)
   "Retrieve pagenum from PAGE-NODE of Goodreads page."
   (->>
    (enlive-query-all page-node [:details > .row > span])
-   (filter-by-itemprop "numberOfPages")
+   (org-books--filter-by-itemprop "numberOfPages")
    (first)
    (enlive-text)
    (s-split-words)
@@ -168,7 +170,7 @@ Assumes it has one."
   "Retrieve average rating from PAGE-NODE of Goodreads page."
   (->>
    (enlive-query-all page-node [:bookMeta > span])
-   (filter-by-itemprop "ratingValue")
+   (org-books--filter-by-itemprop "ratingValue")
    (first)
    (enlive-text)
    (s-trim)))
@@ -189,7 +191,7 @@ Assumes it has one."
   "Retrieve title from PAGE-NODE of OpenLibrary page."
   (->> (enlive-query page-node [.work-title])
        (enlive-text)
-       (string-replace "Book " "#")))
+       (string-replace "Book " "")))
 
 (defun org-books-get-openlibrary-author (page-node)
   "Retrieve author name(s) from PAGE-NODE of OpenLibrary page."
@@ -224,21 +226,25 @@ Assumes it has one."
                              ("LIBRARYTHING-URL" . ,url))))))
 
 (defun org-books-get-librarything-author (page-node)
+  "Retrieve author name from PAGE-NODE of a LibraryThing page."
   (->> (enlive-query-all page-node [.headsummary > h2 > a])
        (-map #'enlive-text)
        (s-join ", ")))
 
 (defun org-books-get-librarything-title-series (page-node)
+  "Retrieve title and series name from PAGE-NODE of a LibraryThing page."
   (s-concat (org-books-get-librarything-title page-node)
             " "
             (org-books-get-librarything-series page-node)))
 
 (defun org-books-get-librarything-title (page-node)
+  "Retrieve title name from PAGE-NODE of a LibraryThing page."
   (->> (enlive-query page-node [.divcanonicaltitle])
        (enlive-text)
        (s-trim)))
 
 (defun org-books-get-librarything-series (page-node)
+  "Retrieve series name from PAGE-NODE of a LibraryThing page."
   (--> (enlive-query-all page-node [:seriesforwork_container > div])
        (-map #'enlive-text it)
        (-map #'org-books--deparenthesize it)
@@ -252,16 +258,26 @@ Assumes it has one."
        (s-join " ")))
 
 (defun org-books-get-librarything-date (page-node)
+  "Retrieve the publication date from PAGE-NODE of a LibraryThing page."
   (->> (enlive-query page-node [.divoriginalpublicationdate])
        (enlive-text)
        (s-match "^[0-9]\\{4\\}")
        (first)))
 
 (defun org-books-get-librarything-rating (page-node)
+  "Retrieve the average rating from PAGE-NODE of a LibraryThing page."
   (->> (enlive-query page-node [.dark_hint])
        (enlive-text)
        (s-match (rx (seq num (? (seq "." (** 1 2 num))))))
        (first)))
+
+(defun org-books-librarything-series-get-urls (series-url)
+  "Collect the URLs of a book series from LibraryThing at once using SERIES-URL."
+  (--> (enlive-fetch series-url)
+       (enlive-query it [.lt_table > table])
+       (enlive-query-all it [.gss_title > a])
+       (--map (s-prepend "https://www.librarything.com" (enlive-attr it 'href)) it)
+       (cons 'series it)))
 
 (defun org-books-get-url-from-isbn (isbn)
   "Make and return openlibrary url from ISBN."
@@ -285,10 +301,9 @@ Assumes it has one."
 Return a list of three items: title (string), author (string) and
 an alist of properties to be applied to the org entry. If the url
 is not supported, throw an error."
-  (let ((output 'no-match)
-        (url-host-string (url-host (url-generic-parse-url url))))
+  (let ((output 'no-match))
     (cl-dolist (pattern-fn-pair org-books-url-pattern-dispatches)
-      (when (s-matches? (car pattern-fn-pair) url-host-string)
+      (when (s-matches? (car pattern-fn-pair) url)
         (setq output (funcall (cdr pattern-fn-pair) url))
         (cl-return)))
     (if (eq output 'no-match)
@@ -369,10 +384,11 @@ assumed, by default, to be marked by READING TODO state."
   "Add book from web URL."
   (interactive "sUrl: ")
   (let ((details (org-books-get-details url)))
-    (if (null details)
-        (when (yes-or-no-p "Error in fetching url. Try again? ")
-          (org-books-add-url url))
-      (apply #'org-books-add-book details))))
+    (cond
+     ((null details) (when (yes-or-no-p "Error in fetching url. Try again? ")
+                       (org-books-add-url url)))
+     ((eq 'series (car details)) (org-books-add-many (cdr details)))
+     (t (apply #'org-books-add-book details)))))
 
 ;;;###autoload
 (defun org-books-add-isbn (isbn)
@@ -449,6 +465,20 @@ Optionally apply PROPS."
           (org-books--insert 1 title author props)
           (save-buffer))))
     (message "org-books-file not set")))
+
+(defun org-books-add-many (book-urls)
+  "Add many books at once (using links in the BOOK-URLS list) to the `org-books file'.
+Currently only supports LibraryThing."
+  (with-current-buffer (find-file-noselect org-books-file)
+    (let ((headers (org-books-get-headers)))
+      (helm :sources (helm-build-sync-source "org-book categories"
+                       :candidates headers
+                       :action (lambda (pos)
+                                 (dolist (url book-urls)
+                                   (apply #'org-books--insert-at-pos
+                                          pos
+                                          (org-books-get-details-librarything url)))))
+            :buffer "*helm org-books add*"))))
 
 (defun org-books--safe-max (xs)
   "Extract the maximum value of XS with special provisions for nil and '(0).
