@@ -247,15 +247,9 @@ Assumes it has one."
   "Retrieve series name from PAGE-NODE of a LibraryThing page."
   (--> (enlive-query-all page-node [:seriesforwork_container > div])
        (-map #'enlive-text it)
-       (-map #'org-books--deparenthesize it)
+       (--map (replace-regexp-in-string "[()]" "" it) it)
        (s-join "; " it)
        (s-concat "(" it ")")))
-
-(defun org-books--deparenthesize (str)
-  "Remove parentheses around any word in STR."
-  (->> str
-       (s-split-words)
-       (s-join " ")))
 
 (defun org-books-get-librarything-date (page-node)
   "Retrieve the publication date from PAGE-NODE of a LibraryThing page."
