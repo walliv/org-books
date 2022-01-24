@@ -220,10 +220,9 @@ Assumes it has one."
          (author (org-books-get-librarything-author page-node))
          (date (org-books-get-librarything-date page-node))
          (lt-rating (org-books-get-librarything-rating page-node)))
-    (if (not (string-equal title ""))
-        (list title author `(("YEAR" . ,date)
-                             ("LIBRARYTHING-RATING" . ,lt-rating)
-                             ("LIBRARYTHING-URL" . ,url))))))
+    (list title author `(("YEAR" . ,date)
+                         ("LIBRARYTHING-RATING" . ,lt-rating)
+                         ("LIBRARYTHING-URL" . ,url)))))
 
 (defun org-books-get-librarything-author (page-node)
   "Retrieve author name from PAGE-NODE of a LibraryThing page."
@@ -233,23 +232,44 @@ Assumes it has one."
 
 (defun org-books-get-librarything-title-series (page-node)
   "Retrieve title and series name from PAGE-NODE of a LibraryThing page."
-  (s-concat (org-books-get-librarything-title page-node)
-            " "
-            (org-books-get-librarything-series page-node)))
+  (let ((title (org-books-get-librarything-title-dispatch page-node))
+        (series (org-books-get-librarything-series page-node)))
+    (if series
+        (s-concat title " " series)
+      title)))
 
-(defun org-books-get-librarything-title (page-node)
-  "Retrieve title name from PAGE-NODE of a LibraryThing page."
-  (->> (enlive-query page-node [.divcanonicaltitle])
-       (enlive-text)
-       (s-trim)))
+(defun org-books-get-librarything-title-dispatch (page-node)
+  "Retrieve book title from a LibraryThing PAGE-NODE.
+Tries to get the canonical title from the wiki, then the original title,
+and finally falls back to the title from the page header if both of the
+above are empty.
+
+The header should always have the book title in it, however it sometimes
+comes with additional information, like the publication date, so it's
+tried last."
+  (or (org-books-get-librarything-title-from page-node [.divcanonicaltitle])
+      (org-books-get-librarything-title-from page-node [.divoriginaltitle])
+      (org-books-get-librarything-title-from page-node [.headsummary > h1])))
+
+(defun org-books-get-librarything-title-from (page-node query)
+  "Retrieve the book title from PAGE-NODE using QUERY.
+If the title cannot be found, return nil."
+  (--> (enlive-query page-node query)
+       (enlive-text it)
+       (s-trim it)
+       (unless (string-empty-p it)
+         it)))
 
 (defun org-books-get-librarything-series (page-node)
-  "Retrieve series name from PAGE-NODE of a LibraryThing page."
-  (--> (enlive-query-all page-node [:seriesforwork_container > div])
+  "Retrieve series name from PAGE-NODE of a LibraryThing page.
+If a series cannot be found, return nil."
+  (let ((series-node (enlive-query-all page-node [:seriesforwork_container > div])))
+    (when series-node
+      (--> series-node
        (-map #'enlive-text it)
        (--map (replace-regexp-in-string "[()]" "" it) it)
        (s-join "; " it)
-       (s-concat "(" it ")")))
+       (s-concat "(" it ")")))))
 
 (defun org-books-get-librarything-date (page-node)
   "Retrieve the publication date from PAGE-NODE of a LibraryThing page."
