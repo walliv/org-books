@@ -421,7 +421,8 @@ AUTHOR and properties from PROPS go as org-property."
     (org-set-property "AUTHOR" author)
     (org-set-property "ADDED" (org-books--today-string))
     (dolist (prop props)
-      (org-set-property (car prop) (cdr prop)))
+      (when (cdr prop) ; Make sure each property has a value.
+        (org-set-property (car prop) (cdr prop))))
     (buffer-string)))
 
 (defun org-books--insert (level title author &optional props)
