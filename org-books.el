@@ -61,6 +61,13 @@
   :type 'integer
   :group 'org-books)
 
+(defcustom org-books-librarything-get-amazon-details t
+  "Parse linked Amazon page when getting details from LibraryThing?
+Gets page number and year, if the latter is not present in the LibraryThing node.
+Slows down scraping."
+  :type 'boolean
+  :group 'org-books)
+
 (defcustom org-books-url-pattern-dispatches
   '(("amazon\\." . org-books-get-details-amazon)
     ("goodreads\\.com" . org-books-get-details-goodreads)
@@ -98,6 +105,31 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
          (author (s-join ", " (org-books-get-details-amazon-authors page-node))))
     (if (not (string-equal title ""))
         (list title author `(("AMAZON" . ,url))))))
+
+(defun org-books-fetch-node-safe (url)
+  (let ((node (enlive-fetch url)))
+    (if (null node)
+        (when (yes-or-no-p "Error in fetching url. Try again? ")
+          (org-books-fetch-node-safe url))
+      node)))
+
+(defun org-books-get-amazon-numpages (page-node)
+  "Get the number of pages in a book from amazon PAGE-NODE."
+  (->>
+   (enlive-query page-node [.detail-bullet-list])
+   (enlive-text)
+   (s-match "[0-9]+ pages")
+   (-first-item)
+   (s-split-words)
+   (-first-item)))
+
+(defun org-books-get-amazon-year (page-node)
+  "Get the publication year of a book from amazon PAGE-NODE."
+  (->>
+   (enlive-query page-node [.detail-bullet-list > li > span])
+   (enlive-text)
+   (s-match (rx (group (= 4 num)) ")"))
+   (-second-item)))
 
 (defun org-books-get-details-goodreads (url)
   "Get book details from goodreads URL."
@@ -218,9 +250,20 @@ Assumes it has one."
   (let* ((page-node (enlive-fetch url))
          (title (org-books-get-librarything-title-series page-node))
          (author (org-books-get-librarything-author page-node))
-         (date (org-books-get-librarything-date page-node))
-         (lt-rating (org-books-get-librarything-rating page-node)))
+         (lt-rating (org-books-get-librarything-rating page-node))
+         (amazon-url (when org-books-librarything-get-amazon-details
+                       (org-books-get-librarything-amazon-url page-node)))
+         (amazon-node (when org-books-librarything-get-amazon-details
+                        (org-books-fetch-node-safe amazon-url)))
+         (date (or (org-books-get-librarything-date page-node)
+                   (when org-books-librarything-get-amazon-details
+                     (org-books-get-amazon-year amazon-node))
+                   (read-string (format "YEAR value for %s: " title))))
+         ;; numpages doesn't always work, so I should have a fallback.
+         (numpages (when org-books-librarything-get-amazon-details
+                     (org-books-get-amazon-numpages amazon-node))))
     (list title author `(("YEAR" . ,date)
+                         ("PAGES" . ,numpages)
                          ("LIBRARYTHING-RATING" . ,lt-rating)
                          ("LIBRARYTHING-URL" . ,url)))))
 
@@ -284,6 +327,13 @@ If a series cannot be found, return nil."
        (enlive-text)
        (s-match (rx (seq num (? (seq "." (** 1 2 num))))))
        (first)))
+
+(defun org-books-get-librarything-amazon-url (page-node)
+  (-> page-node
+      (enlive-query-all [.quicklinks_in_greenbox > div > a])
+      (-third-item)
+      (cadr)
+      (map-elt 'blurb)))
 
 (defun org-books-librarything-series-get-urls (series-url)
   "Collect the URLs of a book series from LibraryThing at once using SERIES-URL."

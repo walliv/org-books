@@ -14,6 +14,7 @@ See the original version for a tutorial.
 - More details from Goodreads.
 - Support for OpenLibrary and LibraryThing.
   + Can add whole series from LibraryThing (just use the series URL)!
+  + New: when scraping from LibraryThing, optionally fetch additional data from Amazon automatically (see the =org-books-librarything-get-amazon-details= variable). Try with a series link for extra oomph!
 - Automated property and state assignment with in-built functions.
 - Re-read tracking.
 - Jump to reading: quickly find books that you are reading right now.
