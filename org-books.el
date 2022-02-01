@@ -62,8 +62,8 @@
   :group 'org-books)
 
 (defcustom org-books-url-pattern-dispatches
-  '(("^\\(www\\.\\)?amazon\\." . org-books-get-details-amazon)
-    ("^\\(www\\.\\)?goodreads\\.com" . org-books-get-details-goodreads)
+  '(("amazon\\." . org-books-get-details-amazon)
+    ("goodreads\\.com" . org-books-get-details-goodreads)
     ("openlibrary\\.org" . org-books-get-details-openlibrary)
     ("librarything\\.com/nseries" . org-books-librarything-series-get-urls)
     ("librarything\\.com" . org-books-get-details-librarything))
