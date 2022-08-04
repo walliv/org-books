@@ -41,6 +41,7 @@
 (require 'subr-x)
 (require 'url)
 (require 'url-parse)
+(require 'ht)
 
 (defgroup org-books nil
   "Org reading list management."
@@ -70,6 +71,7 @@ Slows down scraping."
 
 (defcustom org-books-url-pattern-dispatches
   '(("amazon\\." . org-books-get-details-amazon)
+    ("goodreads\\.com/series" . org-books-goodreads-series-get-urls)
     ("goodreads\\.com" . org-books-get-details-goodreads)
     ("openlibrary\\.org" . org-books-get-details-openlibrary)
     ("librarything\\.com/nseries" . org-books-librarything-series-get-urls)
@@ -162,7 +164,7 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
         (series (org-books--clean-str (enlive-text (enlive-query page-node [:bookSeries > a])))))
     (if (equal "" series)
         title
-      (s-join " " (list title (string-replace "#" "" series))))))
+      (s-join " " (list title (s-replace "#" "" series))))))
 
 (defun org-books-get-goodreads-pages (page-node)
   "Retrieve pagenum from PAGE-NODE of Goodreads page."
@@ -207,6 +209,14 @@ Assumes it has one."
    (first)
    (enlive-text)
    (s-trim)))
+
+(defun org-books-goodreads-series-get-urls (series-url)
+  "Collect the URLs of a book series from Goodreads at once using SERIES-URL."
+  (--> (enlive-fetch series-url)
+       (enlive-query it [.gr-col-md-8])
+       (enlive-query-all it [.responsiveBook > .objectLockupContent > .u-paddingBottomXSmall > a])
+       (--map (s-prepend "https://www.goodreads.com" (enlive-attr it 'href)) it)
+       (ht (:fn #'org-books-get-details-goodreads) (:urls it))))
 
 (defun org-books-get-details-openlibrary (url)
   "Get book details from OpenLibrary URL."
@@ -342,7 +352,7 @@ If a series cannot be found, return nil."
        (enlive-query it [.lt_table > table])
        (enlive-query-all it [.gss_title > a])
        (--map (s-prepend "https://www.librarything.com" (enlive-attr it 'href)) it)
-       (cons 'series it)))
+       (ht (:fn #'org-books-get-details-librarything) (:urls it))))
 
 (defun org-books-get-url-from-isbn (isbn)
   "Make and return openlibrary url from ISBN."
@@ -452,7 +462,7 @@ assumed, by default, to be marked by READING TODO state."
     (cond
      ((null details) (when (yes-or-no-p "Error in fetching url. Try again? ")
                        (org-books-add-url url)))
-     ((eq 'series (car details)) (org-books-add-many (cdr details)))
+     ((hash-table-p details) (org-books-add-many details))
      (t (apply #'org-books-add-book details)))))
 
 ;;;###autoload
@@ -532,18 +542,20 @@ Optionally apply PROPS."
           (save-buffer))))
     (message "org-books-file not set")))
 
-(defun org-books-add-many (book-urls)
+(defun org-books-add-many (url-ht)
   "Add many books at once (using links in the BOOK-URLS list) to the `org-books file'.
 Currently only supports LibraryThing."
   (with-current-buffer (find-file-noselect org-books-file)
-    (let ((headers (org-books-get-headers)))
+    (let ((headers (org-books-get-headers))
+          (fn (ht-get url-ht :fn))
+          (book-urls (ht-get url-ht :urls)))
       (helm :sources (helm-build-sync-source "org-book categories"
                        :candidates headers
                        :action (lambda (pos)
                                  (dolist (url book-urls)
                                    (apply #'org-books--insert-at-pos
                                           pos
-                                          (org-books-get-details-librarything url)))))
+                                          (funcall fn url)))))
             :buffer "*helm org-books add*"))))
 
 (defun org-books--safe-max (xs)
