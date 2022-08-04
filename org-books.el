@@ -185,7 +185,7 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
    (enlive-query-all page-node [:details > .row])
    (second)
    (enlive-text)
-   (s-match "[0-9]\\{4\\}")
+   (s-match (rx (= 4 digit)))
    (first)))
 
 (defun org-books-get-goodreads-original-date (page-node)
@@ -195,7 +195,7 @@ Assumes it has one."
    (enlive-query page-node [:details > .row > .greyText])
    (enlive-text)
    (s-trim)
-   (s-match "[0-9]\\{4\\}")
+   (s-match (rx (= 4 digit)))
    (first)))
 
 (defun org-books-get-goodreads-rating (page-node)
@@ -223,7 +223,7 @@ Assumes it has one."
   "Retrieve title from PAGE-NODE of OpenLibrary page."
   (->> (enlive-query page-node [.work-title])
        (enlive-text)
-       (string-replace "Book " "")))
+       (s-replace "Book " "")))
 
 (defun org-books-get-openlibrary-author (page-node)
   "Retrieve author name(s) from PAGE-NODE of OpenLibrary page."
@@ -237,7 +237,7 @@ Assumes it has one."
   (->> (enlive-query page-node [.work-line])
        (-map #'enlive-text)
        (-last-item)
-       (s-match "[0-9]\\{4\\}")
+       (s-match (rx (= 4 digit)))
        (first)))
 
 (defun org-books-get-openlibrary-pages (page-node)
@@ -318,7 +318,7 @@ If a series cannot be found, return nil."
   "Retrieve the publication date from PAGE-NODE of a LibraryThing page."
   (->> (enlive-query page-node [.divoriginalpublicationdate])
        (enlive-text)
-       (s-match "^[0-9]\\{4\\}")
+       (s-match (rx line-start (= 4 digit)))
        (first)))
 
 (defun org-books-get-librarything-rating (page-node)
