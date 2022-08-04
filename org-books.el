@@ -115,13 +115,14 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
 
 (defun org-books-get-amazon-numpages (page-node)
   "Get the number of pages in a book from amazon PAGE-NODE."
-  (->>
-   (enlive-query page-node [.detail-bullet-list])
-   (enlive-text)
-   (s-match "[0-9]+ pages")
-   (-first-item)
-   (s-split-words)
-   (-first-item)))
+  (ignore-errors
+    (->>
+     (enlive-query page-node [.detail-bullet-list])
+     (enlive-text)
+     (s-match "[0-9]+ pages")
+     (-first-item)
+     (s-split-words)
+     (-first-item))))
 
 (defun org-books-get-amazon-year (page-node)
   "Get the publication year of a book from amazon PAGE-NODE."
@@ -253,14 +254,14 @@ Assumes it has one."
          (lt-rating (org-books-get-librarything-rating page-node))
          (amazon-url (when org-books-librarything-get-amazon-details
                        (org-books-get-librarything-amazon-url page-node)))
-         (amazon-node (when org-books-librarything-get-amazon-details
+         (amazon-node (when amazon-url
                         (org-books-fetch-node-safe amazon-url)))
          (date (or (org-books-get-librarything-date page-node)
-                   (when org-books-librarything-get-amazon-details
+                   (when amazon-node
                      (org-books-get-amazon-year amazon-node))
                    (read-string (format "YEAR value for %s: " title))))
          ;; numpages doesn't always work, so I should have a fallback.
-         (numpages (when org-books-librarything-get-amazon-details
+         (numpages (when amazon-node
                      (org-books-get-amazon-numpages amazon-node))))
     (list title author `(("YEAR" . ,date)
                          ("PAGES" . ,numpages)
