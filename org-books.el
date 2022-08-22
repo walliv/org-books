@@ -82,6 +82,10 @@ return structure from these functions."
   :type '(alist :key-type string :value-type symbol)
   :group 'org-books)
 
+
+(defvar org-books-after-insert-hook nil
+  "Hook to run after inserting a book.")
+
 (defun org-books--get-json (url)
   "Parse JSON data from given URL."
   (with-current-buffer (url-retrieve-synchronously url)
@@ -497,13 +501,14 @@ described in docstring of `org-books-format' function."
   "Goto POS in current buffer, insert a new entry and save buffer.
 
 TITLE, AUTHOR and PROPS are formatted using `org-books-format'."
-  (outline-show-all)
+  (org-fold-show-all)
   (goto-char pos)
   (let ((level (or (org-current-level) 0)))
     (org-books-goto-place)
     (save-excursion
-      (org-books--insert (+ level 1) title author props)
-      (save-buffer))))
+      (org-books--insert (+ level 1) title author props))
+    (run-hooks 'org-books-after-insert-hook)
+    (save-buffer)))
 
 (defun org-books-goto-place ()
   "Move to the position where insertion should happen."
