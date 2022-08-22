@@ -466,15 +466,15 @@ assumed, by default, to be marked by READING TODO state."
   (interactive "sISBN: ")
   (org-books-add-url (org-books-get-url-from-isbn isbn)))
 
-(defun org-books-format (level title author &optional props)
+(defun org-books-format (level title author tags &optional props)
   "Return details as an org headline entry.
 
 LEVEL specifies the headline level. TITLE goes as the main text.
 AUTHOR and properties from PROPS go as org-property."
   (with-temp-buffer
     (org-mode)
-    (insert (make-string level ?*) " " title "\n")
-    (goto-char (point-min))
+    (insert (make-string level ?*) " " title)
+        (org-set-tags tags)
     (org-set-property "AUTHOR" author)
     (org-set-property "ADDED" (org-books--today-string))
     (dolist (prop props)
@@ -495,7 +495,7 @@ AUTHOR and properties from PROPS go as org-property."
 
 Formatting is specified by LEVEL, TITLE, AUTHOR and PROPS as
 described in docstring of `org-books-format' function."
-  (insert (org-books-format level title author props)))
+  (insert (org-books-format level title author "" props)))
 
 (defun org-books--insert-at-pos (pos title author &optional props)
   "Goto POS in current buffer, insert a new entry and save buffer.

@@ -3,10 +3,11 @@
 #+AUTHOR: Andre Goderich
 
 Reading list management using org-mode.
-Original author: @lepisma (Abhinav Tushar): https://github.com/lepisma/org-books.
+This is a fork of goderich (Andre Goderich)
+[[https://github.com/goderich/org-books][repository]] which is a fork of the original
+[[https://github.com/lepisma/org-books][repository]] from lepisma (Abihnav Tushar)
 
-This is my fork with some additional functionality I wanted for myself.
-All credit for the package goes to @lepisma.
+All credit for the package goes to @lepisma, @goderich and @dariuskramer.
 See the original version for a tutorial.
 
 * Differences from the original version
