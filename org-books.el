@@ -143,9 +143,9 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
   (let* ((page-node (enlive-fetch url))
          (title (org-books-get-goodreads-title page-node))
          (author (org-books-get-goodreads-author page-node))
-         (numpages (org-books-get-goodreads-pages page-node))
-         (date (org-books-get-goodreads-date-dispatch page-node))
-         (gr-rating (org-books-get-goodreads-rating page-node)))
+         (featured-details (enlive-query-all page-node [.FeaturedDetails > p]))
+         (numpages (org-books-get-goodreads-pages featured-details))
+         (date (org-books-get-goodreads-date featured-details))
     (if (not (string-equal title ""))
         (list title author `(("YEAR" . ,date)
                              ("PAGES" . ,numpages)
@@ -154,8 +154,9 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
 
 (defun org-books-get-goodreads-author (page-node)
   "Retrieve author name(s) from PAGE-NODE of Goodreads page."
-  (->> (enlive-query-all page-node [.authorName > span])
-    (mapcar #'enlive-text)
+  (->> (enlive-query-all page-node [.ContributorLink__name])
+    (-map #'enlive-text)
+    (-uniq)
     (s-join ", ")
     (org-books--clean-str)))
 
@@ -164,55 +165,32 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
   (--filter (string= itemprop (enlive-attr it 'itemprop)) elements))
 
 (defun org-books-get-goodreads-title (page-node)
-  (let ((title (org-books--clean-str (enlive-text (enlive-get-element-by-id page-node "bookTitle"))))
-        (series (org-books--clean-str (enlive-text (enlive-query page-node [:bookSeries > a])))))
+  (let ((title (org-books--clean-str (enlive-text (enlive-query page-node [h1]))))
+        (series (org-books--clean-str (enlive-text (enlive-query page-node [.Text__title3 > a])))))
     (if (equal "" series)
         title
-      (s-join " " (list title (s-replace "#" "" series))))))
+      (s-concat title " (" (s-replace "#" "" series) ")"))))
 
-(defun org-books-get-goodreads-pages (page-node)
-  "Retrieve pagenum from PAGE-NODE of Goodreads page."
-  (->>
-   (enlive-query-all page-node [:details > .row > span])
-   (org-books--filter-by-itemprop "numberOfPages")
-   (first)
-   (enlive-text)
-   (s-split-words)
-   (first)))
 
-(defun org-books-get-goodreads-date-dispatch (page-node)
-  "Extract correct publication date from PAGE-NODE."
-  (if (enlive-query page-node [:details > .row > .greyText])
-      (org-books-get-goodreads-original-date page-node)
-      (org-books-get-goodreads-date page-node)))
+(defun org-books-get-goodreads-pages (featured-details)
+  "Retrieve pagenum from FEATURED-DETAILS of Goodreads page."
+  (->> featured-details
+       (car)
+       (enlive-text)
+       (s-match (rx (group (+ digit)) " pages"))
+       (-second-item)))
 
-(defun org-books-get-goodreads-date (page-node)
-  "Retrieve date from PAGE-NODE of Goodreads page."
-  (->>
-   (enlive-query-all page-node [:details > .row])
-   (second)
-   (enlive-text)
-   (s-match (rx (= 4 digit)))
-   (first)))
-
-(defun org-books-get-goodreads-original-date (page-node)
-  "Retrieve original publication date from PAGE-NODE.
-Assumes it has one."
-  (->>
-   (enlive-query page-node [:details > .row > .greyText])
-   (enlive-text)
-   (s-trim)
-   (s-match (rx (= 4 digit)))
-   (first)))
+(defun org-books-get-goodreads-date (featured-details)
+  "Retrieve publication date from FEATURED-DETAILS of Goodreads page."
+  (->> featured-details
+       (-second-item)
+       (enlive-text)
+       (s-match (rx (= 4 digit)))
+       (car)))
 
 (defun org-books-get-goodreads-rating (page-node)
   "Retrieve average rating from PAGE-NODE of Goodreads page."
-  (->>
-   (enlive-query-all page-node [:bookMeta > span])
-   (org-books--filter-by-itemprop "ratingValue")
-   (first)
-   (enlive-text)
-   (s-trim)))
+  (enlive-text (enlive-query page-node [.RatingStatistics__rating])))
 
 (defun org-books-goodreads-series-get-urls (series-url)
   "Collect the URLs of a book series from Goodreads at once using SERIES-URL."
@@ -376,18 +354,13 @@ If a series cannot be found, return nil."
 
 (defun org-books-get-details (url)
   "Fetch book details from given URL.
-
 Return a list of three items: title (string), author (string) and
 an alist of properties to be applied to the org entry. If the url
 is not supported, throw an error."
-  (let ((output 'no-match))
-    (cl-dolist (pattern-fn-pair org-books-url-pattern-dispatches)
-      (when (s-matches? (car pattern-fn-pair) url)
-        (setq output (funcall (cdr pattern-fn-pair) url))
-        (cl-return)))
-    (if (eq output 'no-match)
+  (let ((output (--find (s-matches? (car it) url) org-books-url-pattern-dispatches)))
+    (if (not output)
         (error (format "Url %s not understood" url))
-      output)))
+      (funcall (cdr output) url))))
 
 (defun org-books-create-file (file-path)
   "Write initialization stuff in a new file at FILE-PATH."
