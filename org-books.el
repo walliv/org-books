@@ -82,6 +82,17 @@ return structure from these functions."
   :type '(alist :key-type string :value-type symbol)
   :group 'org-books)
 
+(defcustom org-books-genre-tag-associations (make-hash-table :test #'equal)
+  "A hash table of genres scraped from Goodreads to be automatically assigned tags.
+The keys are the genres as written on Goodreads, and the values are the text
+of the tag to be assigned, e.g.:
+
+(\"Humor\" \"funny\")
+
+Different genres can be assigned the same tag. Duplicate tags are removed
+by the `org-books-add-genre-tags' function during assignment."
+  :type '(hash-table :key-type string :value-type string)
+  :group 'org-books)
 
 (defvar org-books-after-insert-hook nil
   "Hook to run after inserting a book.")
@@ -146,11 +157,14 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
          (featured-details (enlive-query-all page-node [.FeaturedDetails > p]))
          (numpages (org-books-get-goodreads-pages featured-details))
          (date (org-books-get-goodreads-date featured-details))
+         (gr-rating (org-books-get-goodreads-rating page-node))
+         (genres (org-books-get-goodreads-genres page-node)))
     (if (not (string-equal title ""))
         (list title author `(("YEAR" . ,date)
                              ("PAGES" . ,numpages)
                              ("GOODREADS-RATING" . ,gr-rating)
-                             ("GOODREADS-URL" . ,url))))))
+                             ("GOODREADS-URL" . ,url)
+                             (:genres . ,genres))))))
 
 (defun org-books-get-goodreads-author (page-node)
   "Retrieve author name(s) from PAGE-NODE of Goodreads page."
@@ -171,7 +185,6 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
         title
       (s-concat title " (" (s-replace "#" "" series) ")"))))
 
-
 (defun org-books-get-goodreads-pages (featured-details)
   "Retrieve pagenum from FEATURED-DETAILS of Goodreads page."
   (->> featured-details
@@ -191,6 +204,11 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
 (defun org-books-get-goodreads-rating (page-node)
   "Retrieve average rating from PAGE-NODE of Goodreads page."
   (enlive-text (enlive-query page-node [.RatingStatistics__rating])))
+
+(defun org-books-get-goodreads-genres (page-node)
+  "Retrieve the genre tags from PAGE-NODE of Goodreads page."
+  (-map #'enlive-text
+      (enlive-query-all page-node [.BookPageMetadataSection__genres > ul > span > span > a])))
 
 (defun org-books-goodreads-series-get-urls (series-url)
   "Collect the URLs of a book series from Goodreads at once using SERIES-URL."
@@ -456,12 +474,21 @@ AUTHOR and properties from PROPS go as org-property."
   (with-temp-buffer
     (org-mode)
     (insert (make-string level ?*) " " title "\n")
+    (goto-char (point-min))
     (org-set-property "AUTHOR" author)
     (org-set-property "ADDED" (org-books--today-string))
     (dolist (prop props)
       (when (cdr prop) ; Make sure each property has a value.
-        (org-set-property (car prop) (cdr prop))))
+        (if (eq (car prop) :genres)
+            (org-books-add-genre-tags (cdr prop))
+          (org-set-property (car prop) (cdr prop)))))
     (buffer-string)))
+
+(defun org-books-add-genre-tags (genre-list)
+  (cl-loop for genre in genre-list
+           for tag = (map-elt org-books-genre-tag-associations genre)
+           if tag collect tag into tags
+           finally do (org-set-tags (-uniq tags))))
 
 (defun org-books--insert (level title author &optional props)
   "Insert book template at current position in buffer.

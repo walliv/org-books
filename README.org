@@ -12,9 +12,10 @@ See the original version for a tutorial.
 * Differences from the original version
 
 - More details from Goodreads.
+  + New: automate genre tagging by customizing the =org-books-genre-tag-associations= variable! (More info below.)
 - Support for OpenLibrary and LibraryThing.
   + Can add whole series from Goodreads and LibraryThing (just use the series URL)!
-  + New: when scraping from LibraryThing, optionally fetch additional data from Amazon automatically (see the =org-books-librarything-get-amazon-details= variable). Try with a series link for extra oomph!
+  + When scraping from LibraryThing, optionally fetch additional data from Amazon automatically (see the =org-books-librarything-get-amazon-details= variable). Try with a series link for extra oomph!
 - Automated property and state assignment with in-built functions.
 - Re-read tracking.
 - Jump to reading: quickly find books that you are reading right now.
@@ -33,6 +34,28 @@ and the original publication year in parentheses:
 in these cases the function fetches the original publication year.
 The function also adds a timestamp
 of the date the book was added to the collection.
+
+*** Automatic genre tagging
+
+The variable =org-books-genre-tag-associations= is a hash table
+that lets you customize which genre tags (Goodreads only so far)
+are assigned upon adding a book to your =org-books= file.
+
+Say you read a lot of urban fantasy, and you'd like to have tags on all
+your urban fantasy books, but you don't want to assign them every time
+by hand. This is where automatic genre tagging comes in handy:
+if a book is tagged as "Urban Fantasy" on Goodreads, =org-books=
+will automatically assign it a tag of your choice.
+
+You can enable this functionality by adding something like this to your config:
+#+BEGIN_SRC elisp
+(map-put! org-books-genre-tag-associations "Urban Fantasy" "urban")
+#+END_SRC
+where the key is the exact genre tag as it appears on Goodreads,
+and the value is what you want it to be tagged as in =org-books=.
+
+Multiple keys can be assigned to the same value.
+Deduplication of tags is handled automatically during assignment.
 
 ** State tracking and re-reads
 
