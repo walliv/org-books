@@ -1,8 +1,10 @@
 ;;; org-books.el --- Reading list management with Org mode and helm   -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2017 Abhinav Tushar
+;;               2022 Vladislav Valek
 
 ;; Author: Abhinav Tushar <abhinav@lepisma.xyz>
+;;         Vladislav Valek <vladislavvalek@email.cz>
 ;; Version: 0.3.0
 ;; Package-Requires: ((enlive "0.0.1") (s "1.11.0") (helm "2.9.2") (helm-org "1.0") (dash "2.14.1") (org "9.3") (emacs "26.1"))
 ;; URL: https://github.com/lepisma/org-books
@@ -108,6 +110,9 @@ by the `org-books-add-genre-tags' function during assignment."
   "Clean TEXT to remove extra whitespaces."
   (s-trim (s-collapse-whitespace text)))
 
+;;;----------------------------------------------------------------------------
+;;; Amazon import
+;;;----------------------------------------------------------------------------
 (defun org-books-get-details-amazon-authors (page-node)
   "Return author names for amazon PAGE-NODE.
 
@@ -148,7 +153,11 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
    (enlive-text)
    (s-match (rx (group (= 4 num)) ")"))
    (-second-item)))
+;;;----------------------------------------------------------------------------
 
+;;;----------------------------------------------------------------------------
+;;; ;Goodreads import;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;----------------------------------------------------------------------------
 (defun org-books-get-details-goodreads (url)
   "Get book details from goodreads URL."
   (let* ((page-node (enlive-fetch url))
@@ -217,7 +226,11 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
        (enlive-query-all it [.responsiveBook > .objectLockupContent > .u-paddingBottomXSmall > a])
        (--map (s-prepend "https://www.goodreads.com" (enlive-attr it 'href)) it)
        (ht (:fn #'org-books-get-details-goodreads) (:urls it))))
+;;;----------------------------------------------------------------------------
 
+;;;----------------------------------------------------------------------------
+;;; OpenLibrary import
+;;;----------------------------------------------------------------------------
 (defun org-books-get-details-openlibrary (url)
   "Get book details from OpenLibrary URL."
   (let* ((page-node (enlive-fetch url))
@@ -255,7 +268,11 @@ PAGE-NODE is the return value of `enlive-fetch' on the page url."
   "Retrieve pagenum from PAGE-NODE of OpenLibrary page."
   (->> (enlive-query page-node [.edition-pages])
        (enlive-text)))
+;;;----------------------------------------------------------------------------
 
+;;;----------------------------------------------------------------------------
+;;; Library thing import
+;;;----------------------------------------------------------------------------
 (defun org-books-get-details-librarything (url)
   "Get book details from librarything URL."
   (let* ((page-node (enlive-fetch url))
@@ -353,7 +370,11 @@ If a series cannot be found, return nil."
        (enlive-query-all it [.gss_title > a])
        (--map (s-prepend "https://www.librarything.com" (enlive-attr it 'href)) it)
        (ht (:fn #'org-books-get-details-librarything) (:urls it))))
+;;;----------------------------------------------------------------------------
 
+;;;----------------------------------------------------------------------------
+;;; Getting information based on ISBN
+;;;----------------------------------------------------------------------------
 (defun org-books-get-url-from-isbn (isbn)
   "Make and return openlibrary url from ISBN."
   (concat "https://openlibrary.org/api/books?bibkeys=ISBN:" isbn "&jscmd=data&format=json"))
@@ -369,7 +390,12 @@ If a series cannot be found, return nil."
          (title (gethash "title" data))
          (author (gethash "name" (car (gethash "authors" data)))))
     (list title author `(("ISBN" . ,url)))))
+;;;----------------------------------------------------------------------------
 
+
+;;;----------------------------------------------------------------------------
+;;; Encapsulating funtion which selects from the above
+;;;----------------------------------------------------------------------------
 (defun org-books-get-details (url)
   "Fetch book details from given URL.
 Return a list of three items: title (string), author (string) and
